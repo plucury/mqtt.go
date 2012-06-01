@@ -1,4 +1,4 @@
 mqtt.go
 =======
 
-an MQTT dissector/decoder,written in GO lang
+an MQTT encoder & decoder,written in GO lang
