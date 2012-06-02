@@ -1,6 +1,7 @@
 package mqtt
 
-import "bytes"
+import ("bytes"
+        "errors")
 
 type MessageType uint8
 type ReturnCode uint8
@@ -92,10 +93,16 @@ func getConnectFlags(b []byte, p *int)*ConnectFlags{
     return flags
 }
 
-func Decode(b []byte)*Mqtt{
+func Decode(b []byte)(*Mqtt, error){
     mqtt := new(Mqtt)
     inx := 0
     mqtt.header = getHeader(b, &inx)
+    if mqtt.header.length != uint8(len(b) - 2){
+        return nil, errors.New("Message length is wrong!")
+    }
+    if msgType := uint8(mqtt.header.messageType); msgType < 1 || msgType > 14{
+        return nil, errors.New("Message Type is invalid!")
+    }
     switch mqtt.header.messageType{
         case CONNECT:{
             mqtt.protocolName = getString(b, &inx)
@@ -117,6 +124,9 @@ func Decode(b []byte)*Mqtt{
         case CONNACK:{
             inx += 1
             mqtt.returnCode = ReturnCode(getUint8(b, &inx))
+            if code := uint8(mqtt.returnCode);code > 5{
+                return nil, errors.New("ReturnCode is invalid!")
+            }
         }
         case PUBLISH:{
             mqtt.topicName = getString(b, &inx)
@@ -161,7 +171,7 @@ func Decode(b []byte)*Mqtt{
             mqtt.topics = topics
         }
     }
-    return mqtt
+    return mqtt, nil
 }
 
 func setUint8(val uint8, buf *bytes.Buffer){
@@ -205,7 +215,11 @@ func boolToByte(val bool)byte{
     return byte(0)
 }
 
-func Encode(mqtt *Mqtt)[]byte{
+func Encode(mqtt *Mqtt)([]byte, error){
+    err := valid(mqtt)
+    if err != nil{
+        return nil, err
+    }
     var buf bytes.Buffer
     setHeader(mqtt.header, &buf)
     switch mqtt.header.messageType{
@@ -266,5 +280,18 @@ func Encode(mqtt *Mqtt)[]byte{
     }
     b := buf.Bytes()
     b[1] = byte(len(b) - 2)
-    return buf.Bytes()
+    return buf.Bytes(), nil
+}
+
+func valid(mqtt *Mqtt)error{
+    if msgType := uint8(mqtt.header.messageType);msgType < 1 || msgType > 14{
+        return errors.New("MessageType is invalid!")
+    }
+    if mqtt.header.qosLevel > 3 {
+        return errors.New("Qos Level is invalid!")
+    }
+    if mqtt.connectFlags != nil && mqtt.connectFlags.willQos > 3{
+        return errors.New("Will Qos Level is invalid!")
+    }
+    return nil
 }

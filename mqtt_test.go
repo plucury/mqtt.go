@@ -10,10 +10,11 @@ func Test(t *testing.T){
     fmt.Println("------ Origin MQTT Object")
     printMqtt(mqtt)
     fmt.Println("------ Encode To Binary")
-    bits := Encode(mqtt)
+    bits, _ := Encode(mqtt)
     printBytes(bits)
     fmt.Println("------ Decode To Object")
-    printMqtt(Decode(bits))
+    newMqtt, _ := Decode(bits)
+    printMqtt(newMqtt)
 }
 
 func initTest()*Mqtt{
