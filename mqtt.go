@@ -160,8 +160,6 @@ func Decode(b []byte)*Mqtt{
             }
             mqtt.topics = topics
         }
-        default:
-            mqtt = nil
     }
     return mqtt
 }
