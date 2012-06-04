@@ -9,7 +9,7 @@ an MQTT encoder & decoder,written in GO lang (*version 1.0.1*)
 
 * `func Decode(bitstream byte[]) (*Mqtt, error)`
 
-	Convert bit stream to Mqtt struct
+	Convert bit stream to Mqtt struct.
 	
 
 
