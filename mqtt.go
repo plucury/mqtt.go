@@ -8,7 +8,8 @@ type ReturnCode uint8
 type Header struct{
     messageType MessageType
     dupFlag, retain bool
-    qosLevel, length uint8
+    qosLevel uint8
+    length uint32
 }
 type ConnectFlags struct{
     usernameFlag, passwordFlag, willRetain, willFlag, cleanSession bool
@@ -76,7 +77,7 @@ func getHeader(b []byte, p *int)*Header{
     header.dupFlag = byte1 & 0x08 > 0
     header.qosLevel = uint8(byte1 & 0x06 >> 1)
     header.retain = byte1 & 0x01 > 0
-    header.length = getUint8(b, p)
+    header.length = decodeLength(b, p)
     return header
 }
 
@@ -97,7 +98,7 @@ func Decode(b []byte)(*Mqtt, error){
     mqtt := new(Mqtt)
     inx := 0
     mqtt.header = getHeader(b, &inx)
-    if mqtt.header.length != uint8(len(b) - 2){
+    if mqtt.header.length != uint32(len(b) - inx){
         return nil, errors.New("Message length is wrong!")
     }
     if msgType := uint8(mqtt.header.messageType); msgType < 1 || msgType > 14{
@@ -195,7 +196,6 @@ func setHeader(header *Header, buf *bytes.Buffer){
     val |= byte(header.qosLevel) << 1
     val |= boolToByte(header.retain)
     buf.WriteByte(val)
-    setUint8(header.length, buf)
 }
 
 func setConnectFlags(flags *ConnectFlags, buf *bytes.Buffer){
@@ -220,8 +220,8 @@ func Encode(mqtt *Mqtt)([]byte, error){
     if err != nil{
         return nil, err
     }
-    var buf bytes.Buffer
-    setHeader(mqtt.header, &buf)
+    var headerbuf, buf bytes.Buffer
+    setHeader(mqtt.header, &headerbuf)
     switch mqtt.header.messageType{
         case CONNECT:{
             setString(mqtt.protocolName, &buf)
@@ -278,9 +278,12 @@ func Encode(mqtt *Mqtt)([]byte, error){
             }
         }
     }
-    b := buf.Bytes()
-    b[1] = byte(len(b) - 2)
-    return buf.Bytes(), nil
+    if buf.Len() > 268435455{
+        return nil, errors.New("Message is too long!")
+    }
+    encodeLength(uint32(buf.Len()), &headerbuf)
+    headerbuf.Write(buf.Bytes())
+    return headerbuf.Bytes(), nil
 }
 
 func valid(mqtt *Mqtt)error{
@@ -294,4 +297,36 @@ func valid(mqtt *Mqtt)error{
         return errors.New("Will Qos Level is invalid!")
     }
     return nil
+}
+
+func decodeLength(b []byte, p *int)uint32{
+    m := uint32(1)
+    v := uint32(b[*p] & 0x7f)
+    *p += 1
+    for ; b[*p-1] & 0x80 > 0 ;{
+        m *= 128
+        v += uint32(b[*p] & 0x7f) * m
+        *p += 1
+    }
+    return v
+}
+
+func encodeLength(length uint32, buf *bytes.Buffer){
+    if length == 0{
+        buf.WriteByte(byte(0))
+        return
+    }
+    var lbuf bytes.Buffer
+    for ; length > 0;{
+        digit := length % 128
+        length = length / 128
+        if length > 0{
+            digit = digit | 0x80
+        }
+        lbuf.WriteByte(byte(digit))
+    }
+    blen := lbuf.Bytes()
+    for i := 1;i <= len(blen);i += 1{
+        buf.WriteByte(blen[len(blen)-i])
+    }
 }

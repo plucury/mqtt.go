@@ -5,6 +5,8 @@ import (
     "fmt"
     )
 
+var bitCnt = uint32(0)
+
 func Test(t *testing.T){
     mqtt := initTest()
     fmt.Println("------ Origin MQTT Object")
@@ -40,6 +42,7 @@ func initTest()*Mqtt{
 }
 
 func printByte(b byte){
+    bitCnt += 1
     out := make([]uint8, 8)
     val := uint8(b)
     for i := 1; val > 0;i += 1{
@@ -47,7 +50,7 @@ func printByte(b byte){
         val = (val - foo) / 2
         out[8 - i] = foo
     }
-    fmt.Println(out)
+    fmt.Println(bitCnt, out)
 }
 
 func printBytes(b []byte){
