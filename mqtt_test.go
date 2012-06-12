@@ -21,17 +21,17 @@ func Test(t *testing.T){
 
 func initTest()*Mqtt{
     mqtt := new(Mqtt)
-    mqtt.header = new(Header)
-    mqtt.header.messageType = MessageType(1)
+    mqtt.Header = new(Header)
+    mqtt.Header.messageType = MessageType(1)
     mqtt.protocolName = "MQIsdp"
     mqtt.protocolVersion = uint8(3)
-    mqtt.connectFlags = new(ConnectFlags)
-    mqtt.connectFlags.usernameFlag = true
-    mqtt.connectFlags.passwordFlag = true
-    mqtt.connectFlags.willRetain = false
-    mqtt.connectFlags.willQos = uint8(1)
-    mqtt.connectFlags.willFlag = true
-    mqtt.connectFlags.cleanSession = true
+    mqtt.ConnectFlags = new(ConnectFlags)
+    mqtt.ConnectFlags.usernameFlag = true
+    mqtt.ConnectFlags.passwordFlag = true
+    mqtt.ConnectFlags.willRetain = false
+    mqtt.ConnectFlags.willQos = uint8(1)
+    mqtt.ConnectFlags.willFlag = true
+    mqtt.ConnectFlags.cleanSession = true
     mqtt.keepAliveTimer = uint16(10)
     mqtt.clientId = "xixihaha"
     mqtt.willTopic = "topic"
@@ -61,8 +61,8 @@ func printBytes(b []byte){
 
 func printMqtt(mqtt *Mqtt){
     fmt.Printf("MQTT = %+v\n", *mqtt)
-    fmt.Printf("Header = %+v\n", *mqtt.header)
-    if mqtt.connectFlags != nil{
-        fmt.Printf("ConnectFlags = %+v\n", *mqtt.connectFlags)
+    fmt.Printf("Header = %+v\n", *mqtt.Header)
+    if mqtt.ConnectFlags != nil{
+        fmt.Printf("ConnectFlags = %+v\n", *mqtt.ConnectFlags)
     }
 }

@@ -16,15 +16,15 @@ type ConnectFlags struct{
     willQos uint8
 }
 type Mqtt struct{
-    header *Header
+    Header *Header
     protocolName, topicName, clientId, willTopic, willMessage, username, password string
     protocolVersion uint8
-    connectFlags *ConnectFlags
+    ConnectFlags *ConnectFlags
     keepAliveTimer, messageId uint16
     data []byte
     topics []string
     topics_qos []uint8
-    returnCode ReturnCode
+    ReturnCode ReturnCode
 }
 
 const(
@@ -97,41 +97,41 @@ func getConnectFlags(b []byte, p *int)*ConnectFlags{
 func Decode(b []byte)(*Mqtt, error){
     mqtt := new(Mqtt)
     inx := 0
-    mqtt.header = getHeader(b, &inx)
-    if mqtt.header.length != uint32(len(b) - inx){
+    mqtt.Header = getHeader(b, &inx)
+    if mqtt.Header.length != uint32(len(b) - inx){
         return nil, errors.New("Message length is wrong!")
     }
-    if msgType := uint8(mqtt.header.messageType); msgType < 1 || msgType > 14{
+    if msgType := uint8(mqtt.Header.messageType); msgType < 1 || msgType > 14{
         return nil, errors.New("Message Type is invalid!")
     }
-    switch mqtt.header.messageType{
+    switch mqtt.Header.messageType{
         case CONNECT:{
             mqtt.protocolName = getString(b, &inx)
             mqtt.protocolVersion = getUint8(b, &inx)
-            mqtt.connectFlags = getConnectFlags(b, &inx)
+            mqtt.ConnectFlags = getConnectFlags(b, &inx)
             mqtt.keepAliveTimer = getUint16(b, &inx)
             mqtt.clientId = getString(b, &inx)
-            if mqtt.connectFlags.willFlag{
+            if mqtt.ConnectFlags.willFlag{
                 mqtt.willTopic = getString(b, &inx)
                 mqtt.willMessage = getString(b, &inx)
             }
-            if mqtt.connectFlags.usernameFlag && inx < len(b){
+            if mqtt.ConnectFlags.usernameFlag && inx < len(b){
                 mqtt.username = getString(b, &inx)
             }
-            if mqtt.connectFlags.passwordFlag && inx < len(b){
+            if mqtt.ConnectFlags.passwordFlag && inx < len(b){
                 mqtt.password = getString(b, &inx)
             }
         }
         case CONNACK:{
             inx += 1
-            mqtt.returnCode = ReturnCode(getUint8(b, &inx))
-            if code := uint8(mqtt.returnCode);code > 5{
+            mqtt.ReturnCode = ReturnCode(getUint8(b, &inx))
+            if code := uint8(mqtt.ReturnCode);code > 5{
                 return nil, errors.New("ReturnCode is invalid!")
             }
         }
         case PUBLISH:{
             mqtt.topicName = getString(b, &inx)
-            if qos := mqtt.header.qosLevel;qos == 1 || qos == 2{
+            if qos := mqtt.Header.qosLevel;qos == 1 || qos == 2{
                 mqtt.messageId = getUint16(b, &inx)
             }
             mqtt.data = b[inx:len(b)]
@@ -141,7 +141,7 @@ func Decode(b []byte)(*Mqtt, error){
             mqtt.messageId = getUint16(b, &inx)
         }
         case SUBSCRIBE:{
-            if qos := mqtt.header.qosLevel;qos == 1 || qos == 2{
+            if qos := mqtt.Header.qosLevel;qos == 1 || qos == 2{
                 mqtt.messageId = getUint16(b, &inx)
             }
             topics := make([]string, 0)
@@ -162,7 +162,7 @@ func Decode(b []byte)(*Mqtt, error){
             mqtt.topics_qos = topics_qos
         }
         case UNSUBSCRIBE:{
-            if qos := mqtt.header.qosLevel;qos == 1 || qos == 2{
+            if qos := mqtt.Header.qosLevel;qos == 1 || qos == 2{
                 mqtt.messageId = getUint16(b, &inx)
             }
             topics := make([]string, 0)
@@ -221,32 +221,32 @@ func Encode(mqtt *Mqtt)([]byte, error){
         return nil, err
     }
     var headerbuf, buf bytes.Buffer
-    setHeader(mqtt.header, &headerbuf)
-    switch mqtt.header.messageType{
+    setHeader(mqtt.Header, &headerbuf)
+    switch mqtt.Header.messageType{
         case CONNECT:{
             setString(mqtt.protocolName, &buf)
             setUint8(mqtt.protocolVersion, &buf)
-            setConnectFlags(mqtt.connectFlags, &buf)
+            setConnectFlags(mqtt.ConnectFlags, &buf)
             setUint16(mqtt.keepAliveTimer, &buf)
             setString(mqtt.clientId, &buf)
-            if mqtt.connectFlags.willFlag{
+            if mqtt.ConnectFlags.willFlag{
                 setString(mqtt.willTopic, &buf)
                 setString(mqtt.willMessage, &buf)
             }
-            if mqtt.connectFlags.usernameFlag && len(mqtt.username) > 0{
+            if mqtt.ConnectFlags.usernameFlag && len(mqtt.username) > 0{
                 setString(mqtt.username, &buf)
             }
-            if mqtt.connectFlags.passwordFlag && len(mqtt.password) > 0{
+            if mqtt.ConnectFlags.passwordFlag && len(mqtt.password) > 0{
                 setString(mqtt.password, &buf)
             }
         }
         case CONNACK:{
             buf.WriteByte(byte(0))
-            setUint8(uint8(mqtt.returnCode), &buf)
+            setUint8(uint8(mqtt.ReturnCode), &buf)
         }
         case PUBLISH:{
             setString(mqtt.topicName, &buf)
-            if qos := mqtt.header.qosLevel;qos == 1 || qos == 2{
+            if qos := mqtt.Header.qosLevel;qos == 1 || qos == 2{
                 setUint16(mqtt.messageId, &buf)
             }
             buf.Write(mqtt.data)
@@ -255,7 +255,7 @@ func Encode(mqtt *Mqtt)([]byte, error){
             setUint16(mqtt.messageId, &buf)
         }
         case SUBSCRIBE:{
-            if qos := mqtt.header.qosLevel;qos == 1 || qos == 2{
+            if qos := mqtt.Header.qosLevel;qos == 1 || qos == 2{
                 setUint16(mqtt.messageId, &buf)
             }
             for i := 0;i < len(mqtt.topics);i += 1{
@@ -270,7 +270,7 @@ func Encode(mqtt *Mqtt)([]byte, error){
             }
         }
         case UNSUBSCRIBE:{
-            if qos := mqtt.header.qosLevel;qos == 1 || qos == 2{
+            if qos := mqtt.Header.qosLevel;qos == 1 || qos == 2{
                 setUint16(mqtt.messageId, &buf)
             }
             for i := 0;i < len(mqtt.topics); i += 1{
@@ -287,13 +287,13 @@ func Encode(mqtt *Mqtt)([]byte, error){
 }
 
 func valid(mqtt *Mqtt)error{
-    if msgType := uint8(mqtt.header.messageType);msgType < 1 || msgType > 14{
+    if msgType := uint8(mqtt.Header.messageType);msgType < 1 || msgType > 14{
         return errors.New("MessageType is invalid!")
     }
-    if mqtt.header.qosLevel > 3 {
+    if mqtt.Header.qosLevel > 3 {
         return errors.New("Qos Level is invalid!")
     }
-    if mqtt.connectFlags != nil && mqtt.connectFlags.willQos > 3{
+    if mqtt.ConnectFlags != nil && mqtt.ConnectFlags.willQos > 3{
         return errors.New("Will Qos Level is invalid!")
     }
     return nil
