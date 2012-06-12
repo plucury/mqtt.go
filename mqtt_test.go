@@ -22,22 +22,22 @@ func Test(t *testing.T){
 func initTest()*Mqtt{
     mqtt := new(Mqtt)
     mqtt.Header = new(Header)
-    mqtt.Header.messageType = MessageType(1)
-    mqtt.protocolName = "MQIsdp"
-    mqtt.protocolVersion = uint8(3)
+    mqtt.Header.MessageType = MessageType(1)
+    mqtt.ProtocolName = "MQIsdp"
+    mqtt.ProtocolVersion = uint8(3)
     mqtt.ConnectFlags = new(ConnectFlags)
-    mqtt.ConnectFlags.usernameFlag = true
-    mqtt.ConnectFlags.passwordFlag = true
-    mqtt.ConnectFlags.willRetain = false
-    mqtt.ConnectFlags.willQos = uint8(1)
-    mqtt.ConnectFlags.willFlag = true
-    mqtt.ConnectFlags.cleanSession = true
-    mqtt.keepAliveTimer = uint16(10)
-    mqtt.clientId = "xixihaha"
-    mqtt.willTopic = "topic"
-    mqtt.willMessage = "message"
-    mqtt.username = "name"
-    mqtt.password = "pwd"
+    mqtt.ConnectFlags.UsernameFlag = true
+    mqtt.ConnectFlags.PasswordFlag = true
+    mqtt.ConnectFlags.WillRetain = false
+    mqtt.ConnectFlags.WillQos = uint8(1)
+    mqtt.ConnectFlags.WillFlag = true
+    mqtt.ConnectFlags.CleanSession = true
+    mqtt.KeepAliveTimer = uint16(10)
+    mqtt.ClientId = "xixihaha"
+    mqtt.WillTopic = "topic"
+    mqtt.WillMessage = "message"
+    mqtt.Username = "name"
+    mqtt.Password = "pwd"
     return mqtt
 }
 
