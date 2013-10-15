@@ -56,8 +56,8 @@ const (
 	NOT_AUTHORIZED
 )
 
-func (mqtt *Mqtt) setMqttReturnCode(returnCode ReturnCode) {
-	mqtt.ReturnCode = returnCode
+func (mq *Mqtt) SetMqttReturnCode(code ReturnCode) {
+	mq.ReturnCode = code
 }
 
 func getUint8(b []byte, p *int) uint8 {
@@ -80,10 +80,10 @@ func getHeader(b []byte, p *int) *Header {
 	byte1 := b[*p]
 	*p += 1
 	header := new(Header)
-	header.MessageType = MessageType(byte1 & 0xF0 >> 4)
-	header.DupFlag = byte1&0x08 > 0
-	header.QosLevel = uint8(byte1 & 0x06 >> 1)
-	header.Retain = byte1&0x01 > 0
+	header.MessageType = MessageType(byte1 >> 4)
+	header.DupFlag = byte1&0x08 != 0
+	header.QosLevel = uint8((byte1 >> 1) & 0x03)
+	header.Retain = byte1&0x01 != 0
 	header.Length = decodeLength(b, p)
 	return header
 }
@@ -162,18 +162,13 @@ func Decode(b []byte) (*Mqtt, error) {
 			//  topics = append(topics, getString(b, &inx))
 			//  topics_qos = append(topics_qos, getUint8(b, &inx))
 			// }
-			subs := []map[string]uint8{}
-			num := 0
+			subs := map[string]uint8{}
 			for inx < len(b) {
-				sub := make(map[string]uint8)
-				sub["topic"] = getString(b, &inx)
-				sub["qos"] = getUint8(b, &inx)
-				subs[num] = sub
-				num = num + 1
+				subs[getString(b, &inx)] = getUint8(b, &inx)
 			}
 			mqtt.Subs = subs
-			mqtt.Topics = topics
-			mqtt.Topics_qos = topics_qos
+			// mqtt.Topics = topics
+			// mqtt.Topics_qos = topics_qos
 		}
 	case SUBACK:
 		{
@@ -287,14 +282,10 @@ func Encode(mqtt *Mqtt) ([]byte, error) {
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
 				setString(mqtt.MessageId, &buf)
 			}
-			// for i := 0; i < len(mqtt.Topics); i += 1 {
-			//  setString(mqtt.Topics[i], &buf)
-			//  setUint8(mqtt.Topics_qos[i], &buf)
-			// }
-			for i := 0; i < len(mqtt.Subs); i += 1 {
-				sub := Subs[i]
-				setString(mqtt.sub["topic"], &buf)
-				setUint8(mqtt.sub["qos"], &buf)
+
+			for key, value := range mqtt.Subs {
+				setString(key, &buf)
+				setUint8(value, &buf)
 			}
 		}
 	case SUBACK:
