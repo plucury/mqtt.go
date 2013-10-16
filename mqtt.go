@@ -156,19 +156,23 @@ func Decode(b []byte) (*Mqtt, error) {
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
 				mqtt.MessageId = getString(b, &inx)
 			}
-			// topics := make([]string, 0)
-			// topics_qos := make([]uint8, 0)
+			topics := make([]string, 0)
+			topics_qos := make([]uint8, 0)
 			// for inx < len(b) {
-			//  topics = append(topics, getString(b, &inx))
-			//  topics_qos = append(topics_qos, getUint8(b, &inx))
+			// 	topics = append(topics, getString(b, &inx))
+			// 	topics_qos = append(topics_qos, getUint8(b, &inx))
 			// }
 			subs := map[string]uint8{}
 			for inx < len(b) {
-				subs[getString(b, &inx)] = getUint8(b, &inx)
+				topic := getString(b, &inx)
+				topic_qos := getUint8(b, &inx)
+				topics = append(topics, topic)
+				topics_qos = append(topics_qos, topic_qos)
+				subs[topic] = topic_qos
 			}
 			mqtt.Subs = subs
-			// mqtt.Topics = topics
-			// mqtt.Topics_qos = topics_qos
+			mqtt.Topics = topics
+			mqtt.Topics_qos = topics_qos
 		}
 	case SUBACK:
 		{
