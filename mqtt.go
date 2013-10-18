@@ -56,10 +56,6 @@ const (
 	NOT_AUTHORIZED
 )
 
-func (mq *Mqtt) SetMqttReturnCode(code ReturnCode) {
-	mq.ReturnCode = code
-}
-
 func getUint8(b []byte, p *int) uint8 {
 	*p += 1
 	return uint8(b[*p-1])
