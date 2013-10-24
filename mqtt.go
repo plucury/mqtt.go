@@ -18,16 +18,15 @@ type ConnectFlags struct {
 	WillQos                                                        uint8
 }
 type Mqtt struct {
-	Header                                                                                   *Header
-	ProtocolName, TopicName, ClientId, WillTopic, WillMessage, MessageId, Username, Password string
-	ProtocolVersion                                                                          uint8
-	ConnectFlags                                                                             *ConnectFlags
-	KeepAliveTimer                                                                           uint16
-	Data                                                                                     []byte
-	Topics                                                                                   []string
-	Topics_qos                                                                               []uint8
-	ReturnCode                                                                               ReturnCode
-	Subs                                                                                     map[string]uint8
+	Header                                                                        *Header
+	ProtocolName, TopicName, ClientId, WillTopic, WillMessage, Username, Password string
+	ProtocolVersion                                                               uint8
+	ConnectFlags                                                                  *ConnectFlags
+	KeepAliveTimer, MessageId                                                     uint16
+	Data                                                                          []byte
+	Topics                                                                        []string
+	Topics_qos                                                                    []uint8
+	ReturnCode                                                                    ReturnCode
 }
 
 const (
@@ -76,10 +75,10 @@ func getHeader(b []byte, p *int) *Header {
 	byte1 := b[*p]
 	*p += 1
 	header := new(Header)
-	header.MessageType = MessageType(byte1 >> 4)
-	header.DupFlag = byte1&0x08 != 0
-	header.QosLevel = uint8((byte1 >> 1) & 0x03)
-	header.Retain = byte1&0x01 != 0
+	header.MessageType = MessageType(byte1 & 0xF0 >> 4)
+	header.DupFlag = byte1&0x08 > 0
+	header.QosLevel = uint8(byte1 & 0x06 >> 1)
+	header.Retain = byte1&0x01 > 0
 	header.Length = decodeLength(b, p)
 	return header
 }
@@ -138,41 +137,32 @@ func Decode(b []byte) (*Mqtt, error) {
 		{
 			mqtt.TopicName = getString(b, &inx)
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
-				mqtt.MessageId = getString(b, &inx)
+				mqtt.MessageId = getUint16(b, &inx)
 			}
 			mqtt.Data = b[inx:len(b)]
 			inx = len(b)
 		}
 	case PUBACK, PUBREC, PUBREL, PUBCOMP, UNSUBACK:
 		{
-			mqtt.MessageId = getString(b, &inx)
+			mqtt.MessageId = getUint16(b, &inx)
 		}
 	case SUBSCRIBE:
 		{
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
-				mqtt.MessageId = getString(b, &inx)
+				mqtt.MessageId = getUint16(b, &inx)
 			}
 			topics := make([]string, 0)
 			topics_qos := make([]uint8, 0)
-			// for inx < len(b) {
-			// 	topics = append(topics, getString(b, &inx))
-			// 	topics_qos = append(topics_qos, getUint8(b, &inx))
-			// }
-			subs := map[string]uint8{}
 			for inx < len(b) {
-				topic := getString(b, &inx)
-				topic_qos := getUint8(b, &inx)
-				topics = append(topics, topic)
-				topics_qos = append(topics_qos, topic_qos)
-				subs[topic] = topic_qos
+				topics = append(topics, getString(b, &inx))
+				topics_qos = append(topics_qos, getUint8(b, &inx))
 			}
-			mqtt.Subs = subs
 			mqtt.Topics = topics
 			mqtt.Topics_qos = topics_qos
 		}
 	case SUBACK:
 		{
-			mqtt.MessageId = getString(b, &inx)
+			mqtt.MessageId = getUint16(b, &inx)
 			topics_qos := make([]uint8, 0)
 			for inx < len(b) {
 				topics_qos = append(topics_qos, getUint8(b, &inx))
@@ -182,7 +172,7 @@ func Decode(b []byte) (*Mqtt, error) {
 	case UNSUBSCRIBE:
 		{
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
-				mqtt.MessageId = getString(b, &inx)
+				mqtt.MessageId = getUint16(b, &inx)
 			}
 			topics := make([]string, 0)
 			for inx < len(b) {
@@ -269,28 +259,27 @@ func Encode(mqtt *Mqtt) ([]byte, error) {
 		{
 			setString(mqtt.TopicName, &buf)
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
-				setString(mqtt.MessageId, &buf)
+				setUint16(mqtt.MessageId, &buf)
 			}
 			buf.Write(mqtt.Data)
 		}
 	case PUBACK, PUBREC, PUBREL, PUBCOMP, UNSUBACK:
 		{
-			setString(mqtt.MessageId, &buf)
+			setUint16(mqtt.MessageId, &buf)
 		}
 	case SUBSCRIBE:
 		{
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
-				setString(mqtt.MessageId, &buf)
+				setUint16(mqtt.MessageId, &buf)
 			}
-
-			for key, value := range mqtt.Subs {
-				setString(key, &buf)
-				setUint8(value, &buf)
+			for i := 0; i < len(mqtt.Topics); i += 1 {
+				setString(mqtt.Topics[i], &buf)
+				setUint8(mqtt.Topics_qos[i], &buf)
 			}
 		}
 	case SUBACK:
 		{
-			setString(mqtt.MessageId, &buf)
+			setUint16(mqtt.MessageId, &buf)
 			for i := 0; i < len(mqtt.Topics_qos); i += 1 {
 				setUint8(mqtt.Topics_qos[i], &buf)
 			}
@@ -298,7 +287,7 @@ func Encode(mqtt *Mqtt) ([]byte, error) {
 	case UNSUBSCRIBE:
 		{
 			if qos := mqtt.Header.QosLevel; qos == 1 || qos == 2 {
-				setString(mqtt.MessageId, &buf)
+				setUint16(mqtt.MessageId, &buf)
 			}
 			for i := 0; i < len(mqtt.Topics); i += 1 {
 				setString(mqtt.Topics[i], &buf)
