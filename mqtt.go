@@ -353,7 +353,7 @@ func encodeLength(length uint32, buf *bytes.Buffer) {
 		lbuf.WriteByte(byte(digit))
 	}
 	blen := lbuf.Bytes()
-	for i := 1; i <= len(blen); i += 1 {
-		buf.WriteByte(blen[len(blen)-i])
+	for i := 0; i < len(blen); i += 1 {
+		buf.WriteByte(blen[i])
 	}
 }
